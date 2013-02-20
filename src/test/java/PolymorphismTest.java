@@ -16,9 +16,11 @@ import java.util.Map;
 import org.apache.commons.io.input.ReaderInputStream;
 import org.apache.commons.io.output.WriterOutputStream;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import org.springframework.http.HttpHeaders;
@@ -32,7 +34,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import static org.junit.Assert.assertEquals;
 
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -44,42 +45,49 @@ import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.CLASS;
 public class PolymorphismTest
 {
 
+    //~ Static fields/initializers ---------------------------------------------
+
+    private static final String JSON =
+        "{\"@class\":\"PolymorphismTest$PropertySheetImpl\",\"properties\":{\"p2name\":{\"@class\":\"PolymorphismTest$StringPropertyImpl\",\"value\":\"p2value\",\"name\":\"p2name\"},\"p1name\":{\"@class\":\"PolymorphismTest$StringPropertyImpl\",\"value\":\"p1value\",\"name\":\"p1name\"}}}";
+
+    //~ Instance fields --------------------------------------------------------
+
+    private MappingJackson2HttpMessageConverter m_converter     =
+        new MappingJackson2HttpMessageConverter();
+    @Mock private HttpOutputMessage             m_outputMessage;
+    @Mock private HttpInputMessage              m_inputMessage;
+    private final StringWriter                  m_writer        =
+        new StringWriter();
+
     //~ Methods ----------------------------------------------------------------
 
-    @Test public void polymorphism()
+    @Test public void deserialize()
         throws IOException
     {
-        MappingJackson2HttpMessageConverter converter =
-            new MappingJackson2HttpMessageConverter();
-        PropertySheet                       sheet     = new PropertySheetImpl();
+        when(m_inputMessage.getBody()).thenReturn(new ReaderInputStream(
+                new StringReader(JSON)));
+        m_converter.write(m_converter.read(PropertySheet.class, m_inputMessage),
+            APPLICATION_JSON, m_outputMessage);
+        assertEquals(JSON, m_writer.toString());
+    }
+
+    @Test public void serialize()
+        throws IOException
+    {
+        PropertySheet sheet = new PropertySheetImpl();
 
         sheet.addProperty(new StringPropertyImpl("p1name", "p1value"));
         sheet.addProperty(new StringPropertyImpl("p2name", "p2value"));
+        m_converter.write(sheet, APPLICATION_JSON, m_outputMessage);
+        assertEquals(JSON, m_writer.toString());
+    }
 
-        HttpOutputMessage outputMessage = mock(HttpOutputMessage.class);
-        HttpInputMessage  inputMessage  = mock(HttpInputMessage.class);
-        StringWriter      writer        = new StringWriter();
-
-        when(outputMessage.getHeaders()).thenReturn(new HttpHeaders());
-        when(outputMessage.getBody()).thenReturn(new WriterOutputStream(
-                writer));
-        converter.write(sheet, APPLICATION_JSON, outputMessage);
-
-        String output = writer.toString();
-
-        assertEquals(
-            "{\"@class\":\"PolymorphismTest$PropertySheetImpl\",\"properties\":{\"p2name\":{\"@class\":\"PolymorphismTest$StringPropertyImpl\",\"value\":\"p2value\",\"name\":\"p2name\"},\"p1name\":{\"@class\":\"PolymorphismTest$StringPropertyImpl\",\"value\":\"p1value\",\"name\":\"p1name\"}}}",
-            output);
-
-        StringReader reader = new StringReader(output);
-
-        when(inputMessage.getBody()).thenReturn(new ReaderInputStream(reader));
-        writer = new StringWriter();
-        when(outputMessage.getBody()).thenReturn(new WriterOutputStream(
-                writer));
-        converter.write(converter.read(PropertySheet.class, inputMessage),
-            APPLICATION_JSON, outputMessage);
-        assertEquals(output, writer.toString());
+    @Before public void setup()
+        throws Exception
+    {
+        when(m_outputMessage.getHeaders()).thenReturn(new HttpHeaders());
+        when(m_outputMessage.getBody()).thenReturn(new WriterOutputStream(
+                m_writer));
     }
 
     //~ Inner Interfaces -------------------------------------------------------
