@@ -42,7 +42,7 @@ import static com.fasterxml.jackson.annotation.JsonTypeInfo.As.PROPERTY;
 import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.CLASS;
 
 @RunWith(MockitoJUnitRunner.class)
-public class PolymorphismTest
+public class PolymorphismSpringTest
 {
 
     //~ Static fields/initializers ---------------------------------------------
