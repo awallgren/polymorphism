@@ -1,48 +1,33 @@
 
-// PolymorphismSpringTest.java --
+// PolymorphismTest.java --
 //
-// PolymorphismSpringTest.java is part of ElectricCommander.
+// PolymorphismTest.java is part of ElectricCommander.
 //
 // Copyright (c) 2005-2013 Electric Cloud, Inc.
 // All rights reserved.
 //
 
 import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.io.input.ReaderInputStream;
-import org.apache.commons.io.output.WriterOutputStream;
-
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpInputMessage;
-import org.springframework.http.HttpOutputMessage;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.junit.Assert.assertEquals;
-
-import static org.mockito.Mockito.when;
-
-import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import static com.fasterxml.jackson.annotation.JsonTypeInfo.As.PROPERTY;
 import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.CLASS;
 
 @RunWith(MockitoJUnitRunner.class)
-public class PolymorphismSpringTest
+public class PolymorphismTest
 {
 
     //~ Static fields/initializers ---------------------------------------------
@@ -52,23 +37,16 @@ public class PolymorphismSpringTest
 
     //~ Instance fields --------------------------------------------------------
 
-    private MappingJackson2HttpMessageConverter m_converter     =
-        new MappingJackson2HttpMessageConverter();
-    @Mock private HttpOutputMessage             m_outputMessage;
-    @Mock private HttpInputMessage              m_inputMessage;
-    private final StringWriter                  m_writer        =
-        new StringWriter();
+    private ObjectMapper m_mapper = new ObjectMapper();
 
     //~ Methods ----------------------------------------------------------------
 
     @Test public void deserialize()
         throws IOException
     {
-        when(m_inputMessage.getBody()).thenReturn(new ReaderInputStream(
-                new StringReader(JSON)));
-        m_converter.write(m_converter.read(PropertySheet.class, m_inputMessage),
-            APPLICATION_JSON, m_outputMessage);
-        assertEquals(JSON, m_writer.toString());
+        assertEquals(JSON,
+            m_mapper.writeValueAsString(
+                m_mapper.readValue(JSON, PropertySheet.class)));
     }
 
     @Test public void serialize()
@@ -78,16 +56,7 @@ public class PolymorphismSpringTest
 
         sheet.addProperty(new StringPropertyImpl("p1name", "p1value"));
         sheet.addProperty(new StringPropertyImpl("p2name", "p2value"));
-        m_converter.write(sheet, APPLICATION_JSON, m_outputMessage);
-        assertEquals(JSON, m_writer.toString());
-    }
-
-    @Before public void setup()
-        throws Exception
-    {
-        when(m_outputMessage.getHeaders()).thenReturn(new HttpHeaders());
-        when(m_outputMessage.getBody()).thenReturn(new WriterOutputStream(
-                m_writer));
+        assertEquals(JSON, m_mapper.writeValueAsString(sheet));
     }
 
     //~ Inner Interfaces -------------------------------------------------------
