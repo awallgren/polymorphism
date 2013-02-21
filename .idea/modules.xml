@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/polymorphism-aggregator.iml" filepath="$PROJECT_DIR$/polymorphism-aggregator.iml" />
+      <module fileurl="file://$PROJECT_DIR$/polymorphism1/polymorphism1.iml" filepath="$PROJECT_DIR$/polymorphism1/polymorphism1.iml" />
+      <module fileurl="file://$PROJECT_DIR$/polymorphism2/polymorphism2.iml" filepath="$PROJECT_DIR$/polymorphism2/polymorphism2.iml" />
+    </modules>
+  </component>
+</project>
+

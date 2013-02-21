@@ -1,15 +1,15 @@
 
-// PolymorphismTest.java --
+// Polymorphism2Test.java --
 //
-// PolymorphismTest.java is part of ElectricCommander.
+// Polymorphism2Test.java is part of ElectricCommander.
 //
 // Copyright (c) 2005-2013 Electric Cloud, Inc.
 // All rights reserved.
 //
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,9 +17,11 @@ import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import static org.junit.Assert.assertEquals;
 
@@ -27,13 +29,18 @@ import static com.fasterxml.jackson.annotation.JsonTypeInfo.As.PROPERTY;
 import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.CLASS;
 
 @RunWith(MockitoJUnitRunner.class)
-public class PolymorphismTest
+@SuppressWarnings("UnusedDeclaration")
+public class Polymorphism2Test
 {
 
     //~ Static fields/initializers ---------------------------------------------
 
     private static final String JSON =
-        "{\"@class\":\"PolymorphismTest$PropertySheetImpl\",\"properties\":{\"p2name\":{\"@class\":\"PolymorphismTest$StringPropertyImpl\",\"value\":\"p2value\",\"name\":\"p2name\"},\"p1name\":{\"@class\":\"PolymorphismTest$StringPropertyImpl\",\"value\":\"p1value\",\"name\":\"p1name\"}}}";
+        "{\"@class\":\"Polymorphism2Test$PropertySheetImpl\","
+            + "\"properties\":"
+            + "{\"p1name\":{\"@class\":\"Polymorphism2Test$StringPropertyImpl\",\"value\":\"p1value\",\"name\":\"p1name\",\"id\":0},"
+            + "\"p2name\":{\"@class\":\"Polymorphism2Test$StringPropertyImpl\",\"value\":\"p2value\",\"name\":\"p2name\",\"id\":0}},"
+            + "\"id\":0}";
 
     //~ Instance fields --------------------------------------------------------
 
@@ -61,8 +68,23 @@ public class PolymorphismTest
 
     //~ Inner Interfaces -------------------------------------------------------
 
+    interface Entity
+    {
+
+        //~ Methods ------------------------------------------------------------
+
+        @JsonIgnore String getEntityType();
+
+        Long getId();
+
+        void setId(Long id);
+
+        @JsonIgnore void setPersistable();
+    }
+
+    @JsonDeserialize(as = NestedPropertySheetImpl.class)
     interface NestedPropertySheet
-        extends Property
+        extends Property<PropertySheet>
     {
 
         //~ Methods ------------------------------------------------------------
@@ -72,46 +94,51 @@ public class PolymorphismTest
         void setValue(PropertySheet propertySheet);
     }
 
+    @JsonDeserialize(as = AbstractProperty.class)
     @JsonTypeInfo(
         use      = CLASS,
         include  = PROPERTY,
         property = "@class"
     )
-    interface Property
+    interface Property<T>
+        extends Entity
     {
 
         //~ Methods ------------------------------------------------------------
 
         String getName();
 
-        @JsonBackReference("propertySheet-properties")
         PropertySheet getParentSheet();
+
+        T getValue();
 
         void setName(String name);
 
         void setParentSheet(PropertySheet parentSheet);
     }
 
+    @JsonDeserialize(as = PropertySheetImpl.class)
     @JsonTypeInfo(
         use      = CLASS,
         include  = PROPERTY,
         property = "@class"
     )
     interface PropertySheet
+        extends Entity
     {
 
         //~ Methods ------------------------------------------------------------
 
         void addProperty(Property property);
 
-        @JsonManagedReference("propertySheet-properties")
         Map<String, Property> getProperties();
 
         void setProperties(Map<String, Property> properties);
     }
 
+    @JsonDeserialize(as = StringPropertyImpl.class)
     interface StringProperty
-        extends Property
+        extends Property<String>
     {
 
         //~ Methods ------------------------------------------------------------
@@ -123,8 +150,37 @@ public class PolymorphismTest
 
     //~ Inner Classes ----------------------------------------------------------
 
-    static class AbstractProperty
-        implements Property
+    static class AbstractEntity
+        implements Entity
+    {
+
+        //~ Instance fields ----------------------------------------------------
+
+        private long m_id;
+
+        //~ Methods ------------------------------------------------------------
+
+        @Override public String getEntityType()
+        {
+            return "";
+        }
+
+        @Override public Long getId()
+        {
+            return m_id;
+        }
+
+        @Override public void setId(Long id)
+        {
+            m_id = id;
+        }
+
+        @Override public void setPersistable() { }
+    }
+
+    abstract static class AbstractProperty<T>
+        extends AbstractEntity
+        implements Property<T>
     {
 
         //~ Instance fields ----------------------------------------------------
@@ -148,6 +204,7 @@ public class PolymorphismTest
             return m_name;
         }
 
+        @JsonBackReference("propertySheet-properties")
         @Override public PropertySheet getParentSheet()
         {
             return m_parentSheet;
@@ -165,7 +222,7 @@ public class PolymorphismTest
     }
 
     static class NestedPropertySheetImpl
-        extends AbstractProperty
+        extends AbstractProperty<PropertySheet>
         implements NestedPropertySheet
     {
 
@@ -199,6 +256,7 @@ public class PolymorphismTest
     }
 
     static class PropertySheetImpl
+        extends AbstractEntity
         implements PropertySheet
     {
 
@@ -212,13 +270,19 @@ public class PolymorphismTest
         {
 
             if (m_properties == null) {
-                m_properties = new HashMap<String, Property>();
+                m_properties = new TreeMap<String, Property>();
             }
 
             property.setParentSheet(this);
             m_properties.put(property.getName(), property);
         }
 
+        @JsonDeserialize(
+            as        = TreeMap.class,
+            keyAs     = String.class,
+            contentAs = Property.class
+        )
+        @JsonManagedReference("propertySheet-properties")
         @Override public Map<String, Property> getProperties()
         {
             return m_properties;
@@ -231,7 +295,7 @@ public class PolymorphismTest
     }
 
     static class StringPropertyImpl
-        extends AbstractProperty
+        extends AbstractProperty<String>
         implements StringProperty
     {
 
@@ -263,4 +327,7 @@ public class PolymorphismTest
             m_value = value;
         }
     }
+
+    static class YetAnotherClass
+        extends StringPropertyImpl { }
 }
